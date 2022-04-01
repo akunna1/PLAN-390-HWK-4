@@ -1,5 +1,5 @@
 #Homework 4: Web Scraping and Analysis of Scrap Data
-# The code runs very slow so run them in batches i.e batches 1-4
+# The code runs very slow so, run them in batches i.e batches 1-4
 
 # BATCH 1
 library(tidyverse)
@@ -17,7 +17,6 @@ session = bow("https://www.ncleg.gov/Members/MemberList/S")
 
 # now, let's retrieve the first page of results
 res = scrape(session)
-
 
 #BATCH 2
 # next, looking at the Chrome inspector, let's find the table element that
@@ -58,13 +57,13 @@ for (link in links) {
 senators <- bind_rows(senator_info)
 senators
 
-shp_file <- st_read("SL 2022-2.shp")
+#shp_file <- st_read("SL 2022-2.shp")
+shp_file <- read_sf("SL 2022-2.shp")
 
 shp_file
 summary(shp_file)
 
 write_csv(senators, "senators.csv")
-
 
 # merge on common variable, here called 'District'
 joined_files <- merge(senators, shp_file, by.x='District', by.y ='DISTRICT')
@@ -72,9 +71,27 @@ joined_files$Terms_int <- joined_files$Terms %>% strsplit(split = " \\(") %>% la
   strsplit(split = "\\+") %>% lapply(`[`, 1) %>% as.numeric
 joined_files
 
-
 total_party_terms <- aggregate(list("Total Terms" = joined_files$Terms_int), by=list(Party=joined_files$Party), FUN="sum", na.rm=TRUE, na.action=NULL)
 avg_party_terms <- aggregate(list("Average Terms" = joined_files$Terms_int), by=list(Party=joined_files$Party), FUN="mean", na.rm=TRUE, na.action=NULL)
 total_party_terms
 avg_party_terms
 
+# Selects only Republicans
+plot_data = as.data.table(joined_files)
+republicans_nc = filter(plot_data, Party == "Republican") 
+
+#Plot 1: shows the entire North Carolina
+ggplot() +
+  geom_sf(data=shp_file)
+
+#Plot 2: shows the Republican Senators in North Carolina and their terms
+ggplot() +
+  geom_sf(data=republicans_nc, aes(geometry = geometry, fill=Terms_int), lwd=0) +
+  scale_fill_fermenter(palette="Greens")+
+  ggtitle("Republican Senators in NC and Their Terms")
+
+#Plot 3: shows all the Senators in North Carolina and their terms
+ggplot() +
+  geom_sf(data=plot_data, aes(geometry = geometry, fill=Terms_int), lwd=0) +
+  scale_fill_fermenter(palette="Reds")+
+  ggtitle("Senators in NC and Their Terms")
